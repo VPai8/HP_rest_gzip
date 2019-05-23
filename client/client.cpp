@@ -1,6 +1,6 @@
 #include <cpprest/http_client.h>
 #include <cpprest/filestream.h>
-
+#include "multipart_parser.h"
 using namespace utility;                    // Common utilities like string conversions
 using namespace web;                        // Common features like URIs.
 using namespace web::http;                  // Common HTTP functionality
@@ -8,37 +8,35 @@ using namespace web::http::client;          // HTTP client features
 using namespace concurrency::streams;       // Asynchronous streams
 
 int main(int argc, char* argv[]){
-    auto outfileStream = std::make_shared<ostream>();
-    pplx::task<void> requestTask = fstream::open_istream(U(argv[1]))
-    .then([=](istream inFile){
+      
+        MultipartParser p1;
+        p1.AddFile("file", "abc.jpeg");
+        p1.AddFile("file","splice.mp4");
+        p1.AddFile("file", "client.cpp");
+        utility::string_t boundary = p1.boundary();
+        std::string body = p1.GenBodyContent();
+        
+        http_request req;
         http_client client(U("http://localhost:8080/HPServer/"));
-        return client.request(methods::GET, argv[2] , inFile , _XPLATSTR("application/octet-stream"));
-    })
-    .then([=](http_response response){
+        req.set_request_uri("compress");
+        req.set_method(web::http::methods::GET);
+        req.set_body(body,U("multipart/form-data; boundary="+boundary));
+        
+        pplx::task<http_response> reqtask = client.request(req);
+        http_response response = reqtask.get(); 
         printf("Received response status code:%u\n", response.status_code());
-    	std::string fname;
-        if(argv[2][0]=='c')
-            fname = std::string(argv[1])+".gz";
-        else{
-            std::string inter = std::string(argv[1]);
-            fname = inter.substr(0,inter.length()-3);
+        
+        MultipartParser p2;
+        p2.SetBody(response.extract_string(true).get());
+        p2.SetBound(response.headers().content_type());
+	    std::map<std::string,std::string> m = p2.GetBodyContent();
+        std::map<std::string,std::string>::iterator it;
+        std::vector<unsigned char> data;
+        for(it=m.begin();it!=m.end();++it){
+            data = utility::conversions::from_base64(it->second);
+            std::ofstream outfile(it->first, std::ios::out | std::ios::binary); 
+            outfile.write(reinterpret_cast<const char *>(data.data()), data.size()); 
         }
-	    auto storeTask = fstream::open_ostream(U(fname)).get();   
-        *outfileStream = storeTask; 
-	    return response.body().read_to_end(outfileStream->streambuf());
-    })
-    .then([=](size_t){
-        return outfileStream->close();
-    });
-    // Wait for all the outstanding I/O to complete and handle any exceptions
-    try
-    {
-        requestTask.wait();
-    }
-    catch (const std::exception &e)
-    {
-        printf("Error exception:%s\n", e.what());
-    }
-
-    return 0;
+        
+        return 0;
 }
