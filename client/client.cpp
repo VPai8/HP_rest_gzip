@@ -6,16 +6,25 @@ using namespace web;                        // Common features like URIs.
 using namespace web::http;                  // Common HTTP functionality
 using namespace web::http::client;          // HTTP client features
 using namespace concurrency::streams;       // Asynchronous streams
-
+void disp(dirs dir){
+    int i;
+    std::cout<<dir.dir<<"\n";
+    for(i=0;i<dir.file.size();++i){
+        std::cout<<dir.file[i].first<<" "<<dir.file[i].second<<"\n"<<dir.fcontent[i]<<"\n";
+    }
+    for(i=0;i<dir.subdirs.size();++i){
+        
+        disp(dir.subdirs[i]);
+        
+    }
+}
 int main(int argc, char* argv[]){
       
         MultipartParser p1;
-        p1.AddFile("file", "abc.jpeg");
-        p1.AddFile("file","splice.mp4");
-        p1.AddFile("file", "client.cpp");
-        utility::string_t boundary = p1.boundary();
+        std::string boundary = p1.boundary();
+        p1.AddFile("file","newexp.cpp",1);
+        p1.AddFile("folder","xyz",2);
         std::string body = p1.GenBodyContent();
-        
         http_request req;
         http_client client(U("http://localhost:8080/HPServer/"));
         req.set_request_uri("compress");
@@ -29,14 +38,6 @@ int main(int argc, char* argv[]){
         MultipartParser p2;
         p2.SetBody(response.extract_string(true).get());
         p2.SetBound(response.headers().content_type());
-	    std::map<std::string,std::string> m = p2.GetBodyContent();
-        std::map<std::string,std::string>::iterator it;
-        std::vector<unsigned char> data;
-        for(it=m.begin();it!=m.end();++it){
-            data = utility::conversions::from_base64(it->second);
-            std::ofstream outfile(it->first, std::ios::out | std::ios::binary); 
-            outfile.write(reinterpret_cast<const char *>(data.data()), data.size()); 
-        }
-        
+	    std::vector<std::pair<std::string,int>> m = p2.GetBodyContent();
         return 0;
 }

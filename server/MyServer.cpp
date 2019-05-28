@@ -26,25 +26,35 @@ void MyServer::handle_get(http_request message){
 	MultipartParser p1; 
     p1.SetBody(message.extract_string(true).get());
     p1.SetBound(message.headers().content_type());
-	std::map<std::string,std::string> m = p1.GetBodyContent();
-    std::map<std::string,std::string>::iterator it;
-	MultipartParser p2;
-	std::string fname;
-	for(it=m.begin();it!=m.end();++it){ //run parallel
-		std::vector<unsigned char> data = utility::conversions::from_base64(it->second);
-    	std::ofstream outfile(it->first, std::ios::out | std::ios::binary); 
-    	outfile.write(reinterpret_cast<const char *>(data.data()), data.size()); 
+	std::vector<std::pair<std::string,int>> m = p1.GetBodyContent();
+    MultipartParser p2;
+	std::string fname,ftype;
+	for(int i=0;i<m.size();++i){ //run parallel
 		if(token=="compress"){
-			const std::string comm = "sh compress.sh "+ it->first;
+			if(fs::is_directory(fs::path(m[i].first))){
+				fname=m[i].first;
+				ftype="folder";
+			}
+			else{
+				fname=m[i].first+".gz";
+				ftype="file";
+			}
+			const std::string comm = "gzip -r -"+ std::to_string(m[i].second) +" " + m[i].first;
 			system(comm.c_str());
-			fname = it->first+".gz";
 		}
 		else{
-			const std::string comm = "sh decompress.sh "+ it->first;
+			if(fs::is_directory(fs::path(m[i].first))){
+				fname=m[i].first;
+				ftype="folder";
+			}
+			else{
+				fname=m[i].first.substr(0,m[i].first.length()-3);
+				ftype="file";
+			}
+			const std::string comm = "gzip -rd "+ m[i].first;
 			system(comm.c_str());
-			fname = (it->first).substr(0,(it->first).length()-3);
 		}
-		p2.AddFile("file", fname);
+		p2.AddFile(ftype,fname);
 	}
 	std::string boundary = p2.boundary();
     std::string body = p2.GenBodyContent();
