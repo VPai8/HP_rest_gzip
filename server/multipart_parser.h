@@ -35,11 +35,10 @@ public:
   inline void AddFile(const std::string &name, const std::string &value,int mode=0){
     files_.push_back(std::move(std::pair<std::pair<std::string, std::string>, int>(std::pair<std::string, std::string>(name,value),mode)));
   }
-  /* inline void Dispfile(){
-    for(int i=0;i<files_.size();++i){
-      std::cout<<files_[i].first.first<<" "<<files_[i].first.second<<" "<<files_[i].second<<"\n";
-    }
-  } */
+  inline void SetFileDetails(std::string fdetails){
+    fdetails_=fdetails;
+  }
+  
   std::string GenBodyContent();
   std::vector<std::pair<std::string,int>> GetBodyContent();
   inline void SetBody(std::string content){
@@ -51,6 +50,7 @@ public:
   }
 private:
   unsigned long long parse;
+  std::string fdetails_;
   static const std::string boundary_prefix_;
   static const std::string rand_chars_;
   std::string boundary_;

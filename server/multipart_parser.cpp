@@ -65,6 +65,8 @@ void MultipartParser::MakeDirs(fs::path p,dirs d){
       std::vector<unsigned char> data = utility::conversions::from_base64(d.fcontent[i]);
     	std::ofstream outfile(dirpath.string()+"/"+d.file[i].first, std::ios::out | std::ios::binary); 
     	outfile.write(reinterpret_cast<const char *>(data.data()), data.size()); 
+      outfile.close();
+      
   }
   for(int i=0;i<d.subdirs.size();++i){
     MakeDirs(dirpath,d.subdirs[i]);
@@ -122,35 +124,13 @@ std::string MultipartParser::GenBodyContent(){
   
   body_content_.clear();
   dirs d;
-  d.dir=".";
   std::vector<std::string> mfile;
   std::vector<int> mode;
   for(auto &file:files_){
     mfile.push_back(file.first.second);
     mode.push_back(file.second);
-    if(file.first.first=="file"){
-      std::future<std::vector<unsigned char>> content_futures = std::async(std::launch::async, [&file](){
-        std::ifstream ifile(file.first.second, std::ios::binary | std::ios::ate);
-        std::streamsize size = ifile.tellg();
-        ifile.seekg(0, std::ios::beg);
-        std::vector<unsigned char> buff(size);
-        ifile.read((char*)&buff[0], size);
-        ifile.close();
-        return buff;
-      });
-      d.fcontent.push_back(utility::conversions::to_base64(content_futures.get()));
-      d.file.push_back(std::make_pair(file.first.second,d.fcontent.back().length()));
-    }
-    else{
-      if(!fs::is_empty(file.first.second))
-        d.subdirs.push_back(GetDirs(fs::directory_iterator(file.first.second)));
-      else{
-        dirs dtemp;
-        dtemp.dir = file.first.second;
-        d.subdirs.push_back(dtemp);
-      }
-    }   
   }
+    d=GetDirs(fs::directory_iterator("send"));
   
   body_content_ += "\r\n";
   body_content_ += boundary_;
@@ -158,22 +138,10 @@ std::string MultipartParser::GenBodyContent(){
   body_content_ += "Content-Type=\"text/plain\""; 
   body_content_ += "\nContent-Transfer-Encoding: base64\n\n";
   std::string bodymeta;
-  bodymeta+="/.\n";
-  for(int i = 0; i < d.file.size(); ++i){
-    bodymeta+= d.file[i].first;
-    bodymeta+= " ";
-    bodymeta+= std::to_string(d.file[i].second);
-    bodymeta+= " ";
-    bodymeta+= std::to_string(mode[std::distance(mfile.begin(),std::find(mfile.begin(),mfile.end(),d.file[i].first))]);
-    bodymeta+= "\n";
-  }
-  for(int i = 0; i < d.subdirs.size(); ++i){
-    bodymeta+= GetDirMeta(d.subdirs[i]);
-    bodymeta+= std::to_string(mode[std::distance(mfile.begin(),std::find(mfile.begin(),mfile.end(),d.subdirs[i].dir))]);
-    bodymeta+= "\n";
-  }
-  bodymeta+="\\\n";
+  d.dir=".";
+  bodymeta+= GetDirMeta(d);
   body_content_ += utility::conversions::to_base64(std::vector<unsigned char> (bodymeta.begin(),bodymeta.end()));
+  
   body_content_ += "\r\n";
   body_content_ += boundary_;
   body_content_ += "\r\nContent-Disposition: form-data; name=\"dirs\"\n";    
@@ -184,6 +152,13 @@ std::string MultipartParser::GenBodyContent(){
   body_content_ += GetDirData(d,sub_bound);
   body_content_ += "\r\n";
   body_content_ += sub_bound+"--";
+  
+  body_content_ += "\r\n";
+  body_content_ += boundary_;
+  body_content_ += "\r\nContent-Disposition: form-data; name=\"file_details\"\n";    
+  body_content_ += "Content-Type=\"text/plain\""; 
+  body_content_ += "\nContent-Transfer-Encoding: base64\n\n";
+  body_content_ += utility::conversions::to_base64(std::vector<unsigned char> (fdetails_.begin(),fdetails_.end()));
   body_content_ += "\r\n";
   body_content_ += boundary_+"--";
   body_content_ += "\r\n";
@@ -226,7 +201,7 @@ std::vector<std::pair<std::string,int>> MultipartParser::GetBodyContent(){
   unsigned long long lenbody = body_content_.length(),fsize;
   std::vector<std::pair<std::string,int>> m;
   dirs d;
-  d.dir=".";
+  d.dir="receive";
   std::string bound;
   bound = body_content_.substr(p,found-p);
   while (bound!=boundary_+"--"){
@@ -285,15 +260,7 @@ std::vector<std::pair<std::string,int>> MultipartParser::GetBodyContent(){
     p=found+2;
     parse=p;
     d = ParseDirData(d);
-    //parse rest of the boundary. also compression details.
-    for(int i=0;i<d.file.size();++i){
-      std::vector<unsigned char> data = utility::conversions::from_base64(d.fcontent[i]);
-    	std::ofstream outfile(d.file[i].first, std::ios::out | std::ios::binary); 
-    	outfile.write(reinterpret_cast<const char *>(data.data()), data.size()); 
-    }
-    for(int i=0;i<d.subdirs.size();++i){
-      MakeDirs(fs::path("."),d.subdirs[i]);
-    }
+    MakeDirs(fs::path("."),d);
     
     return m;
   }

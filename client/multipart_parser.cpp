@@ -122,35 +122,13 @@ std::string MultipartParser::GenBodyContent(){
   
   body_content_.clear();
   dirs d;
-  d.dir=".";
   std::vector<std::string> mfile;
   std::vector<int> mode;
   for(auto &file:files_){
     mfile.push_back(file.first.second);
     mode.push_back(file.second);
-    if(file.first.first=="file"){
-      std::future<std::vector<unsigned char>> content_futures = std::async(std::launch::async, [&file](){
-        std::ifstream ifile(file.first.second, std::ios::binary | std::ios::ate);
-        std::streamsize size = ifile.tellg();
-        ifile.seekg(0, std::ios::beg);
-        std::vector<unsigned char> buff(size);
-        ifile.read((char*)&buff[0], size);
-        ifile.close();
-        return buff;
-      });
-      d.fcontent.push_back(utility::conversions::to_base64(content_futures.get()));
-      d.file.push_back(std::make_pair(file.first.second,d.fcontent.back().length()));
-    }
-    else{
-      if(!fs::is_empty(file.first.second))
-        d.subdirs.push_back(GetDirs(fs::directory_iterator(file.first.second)));
-      else{
-        dirs dtemp;
-        dtemp.dir = file.first.second;
-        d.subdirs.push_back(dtemp);
-      }
-    }   
   }
+    d=GetDirs(fs::directory_iterator("send"));
   
   body_content_ += "\r\n";
   body_content_ += boundary_;
@@ -219,85 +197,66 @@ dirs MultipartParser::ParseDirMeta(std::string meta){
   return d;
 }
 
-std::vector<std::pair<std::string,int>> MultipartParser::GetBodyContent(){
+void MultipartParser::GetBodyContent(){
   std::string boundary = boundary_;
   unsigned long long p=2;
-  unsigned long long found = body_content_.find("\r",p);
-  unsigned long long lenbody = body_content_.length(),fsize;
-  std::vector<std::pair<std::string,int>> m;
+  unsigned long long found;
+  
   dirs d;
-  d.dir=".";
-  std::string bound;
-  bound = body_content_.substr(p,found-p);
-  while (bound!=boundary_+"--"){
-    p=found+2;
+  d.dir="receive";
+
+  for(int i=0;i<5;++i){
     found = body_content_.find("\n",p);
     p=found+1;
-    found = body_content_.find("\n",p);
-    p=found+1;
-    found = body_content_.find("\n",p);
-    p=found+1;
-    found = body_content_.find("\n",p);
-    p=found+1;
-    
-    found = body_content_.find("\r",p);
-    std::vector<unsigned char> v= utility::conversions::from_base64(body_content_.substr(p,found-p));
-    std::string meta=std::string(reinterpret_cast<const char*>(&v[0]),v.size());    
-    int mode,f;
-    parse=3;
-    while(meta[parse]!='\\'){
-      if(meta[parse]=='/'){
-        d.subdirs.push_back(ParseDirMeta(meta));
-        f = meta.find("\n",parse);
-        std::istringstream t1(meta.substr(parse,f-parse));
-        t1>>mode;
-        parse=f+1;
-        m.push_back(std::make_pair(d.subdirs.back().dir,mode));
-      }
-      else{
-        std::string fname;
-        unsigned long fsize;
-        f = meta.find(" ",parse);
-        fname = meta.substr(parse,f-parse);
-        parse = f+1;
-        f = meta.find(" ",parse);
-        std::istringstream t1(meta.substr(parse,f-parse));
-        t1>>fsize;
-        parse = f+1;
-        f = meta.find("\n",parse);
-        std::istringstream t2(meta.substr(parse,f-parse));
-        t2>>mode;
-        parse=f+1;
-        d.file.push_back(std::make_pair(fname,fsize));
-        m.push_back(std::make_pair(fname,mode));
-      }
-    }
-    p=found+2;
-    found = body_content_.find("\n",p);
-    p=found+1;
-    found = body_content_.find("\n",p);
-    p=found+1;
-    found = body_content_.find(" ",p);
-    p=found+2;
-    found = body_content_.find("=",p);
-    p=found+1;
-    found = body_content_.find("\r",p);
-    p=found+2;
-    parse=p;
-    d = ParseDirData(d);
-    //parse rest of the boundary. also compression details.
-    for(int i=0;i<d.file.size();++i){
-      std::vector<unsigned char> data = utility::conversions::from_base64(d.fcontent[i]);
-    	std::ofstream outfile(d.file[i].first, std::ios::out | std::ios::binary); 
-    	outfile.write(reinterpret_cast<const char *>(data.data()), data.size()); 
-    }
-    for(int i=0;i<d.subdirs.size();++i){
-      MakeDirs(fs::path("."),d.subdirs[i]);
-    }
-    
-    return m;
   }
-  //return std::make_pair(d,m);
+  
+  found = body_content_.find("\r",p);
+  std::vector<unsigned char> v= utility::conversions::from_base64(body_content_.substr(p,found-p));
+  std::string meta=std::string(reinterpret_cast<const char*>(&v[0]),v.size());    
+  int mode,f;
+  parse=3;
+  while(meta[parse]!='\\'){
+    if(meta[parse]=='/'){
+      d.subdirs.push_back(ParseDirMeta(meta));
+    }
+    else{
+      std::string fname;
+      unsigned long fsize;
+      f = meta.find(" ",parse);
+      fname = meta.substr(parse,f-parse);
+      parse = f+1;
+      f = meta.find("\n",parse);
+      std::istringstream t1(meta.substr(parse,f-parse));
+      t1>>fsize;
+      parse = f+1;
+      d.file.push_back(std::make_pair(fname,fsize));      
+    }
+  }
+  p=found+2;
+  found = body_content_.find("\n",p);
+  p=found+1;
+  found = body_content_.find("\n",p);
+  p=found+1;
+  found = body_content_.find(" ",p);
+  p=found+2;
+  found = body_content_.find("=",p);
+  p=found+1;
+  found = body_content_.find("\r",p);
+  p=found+2;
+  parse=p;
+  d = ParseDirData(d);
+  p=parse;
+  MakeDirs(fs::path("."),d);
+  for(int i=0;i<6;++i){
+    found = body_content_.find("\n",p);
+    p=found+1;
+  }
+  found = body_content_.find("\r",p);
+  std::vector<unsigned char> w= utility::conversions::from_base64(body_content_.substr(p,found-p));
+  std::string fdetails=std::string(reinterpret_cast<const char*>(&w[0]),w.size());    
+  std::ofstream out("receive/file_details.txt");
+  out<<fdetails;
+  out.close();   
 } 
 } //namespace web::http
 } //namespace web

@@ -22,9 +22,13 @@ int main(int argc, char* argv[]){
       
         MultipartParser p1;
         std::string boundary = p1.boundary();
-        p1.AddFile("file","newexp.cpp",1);
-        p1.AddFile("folder","xyz",2);
+        p1.AddFile("file","abc.jpg",1);
+        p1.AddFile("file","abc.jpg",9);
+        p1.AddFile("file","def.pdf",5);
+        p1.AddFile("file","ghi.mp3",9);
+        p1.AddFile("folder","xyz",4);
         std::string body = p1.GenBodyContent();
+        //std::cout<<body;
         http_request req;
         http_client client(U("http://localhost:8080/HPServer/"));
         req.set_request_uri("compress");
@@ -38,6 +42,6 @@ int main(int argc, char* argv[]){
         MultipartParser p2;
         p2.SetBody(response.extract_string(true).get());
         p2.SetBound(response.headers().content_type());
-	    std::vector<std::pair<std::string,int>> m = p2.GetBodyContent();
+	    p2.GetBodyContent(); 
         return 0;
 }

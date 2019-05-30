@@ -41,7 +41,7 @@ public:
     }
   } */
   std::string GenBodyContent();
-  std::vector<std::pair<std::string,int>> GetBodyContent();
+  void GetBodyContent();
   inline void SetBody(std::string content){
     body_content_= content;
   }
