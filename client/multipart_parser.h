@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <future>
 #include <cpprest/containerstream.h>
+#include <cstdarg>
 namespace fs = boost::filesystem;
 
 namespace web{
@@ -32,8 +33,16 @@ public:
   inline const std::string boundary(){
     return boundary_;
   }
-  inline void AddFile(const std::string &name, const std::string &value,int mode=0){
-    files_.push_back(std::move(std::pair<std::pair<std::string, std::string>, int>(std::pair<std::string, std::string>(name,value),mode)));
+  inline void AddFile(const std::string &name, const std::string &value, int count=0, ...){
+    std::vector<int> modes;
+    va_list args;
+    va_start(args, count);
+    for (int i = 0; i < count; ++i){
+        modes.push_back(va_arg(args, int));
+        std::cout<<modes[i]<<" ";
+    }
+    va_end(args);
+    files_.push_back(std::move(std::pair<std::pair<std::string, std::string>, std::vector<int>>(std::pair<std::string, std::string>(name,value),modes)));
   }
   /* inline void Dispfile(){
     for(int i=0;i<files_.size();++i){
@@ -55,7 +64,7 @@ private:
   static const std::string rand_chars_;
   std::string boundary_;
   std::string body_content_;
-  std::vector<std::pair<std::pair<std::string, std::string>, int>> files_;
+  std::vector<std::pair<std::pair<std::string, std::string>, std::vector<int>>> files_;
   std::string GenBound();
   dirs GetDirs(fs::directory_iterator);
   std::string GetDirMeta(dirs d);  

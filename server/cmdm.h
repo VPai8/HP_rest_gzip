@@ -33,7 +33,7 @@ string compress (string fname, int mode ,string opath){
     i.open(fname, ios::in | ios::binary );
     fname = fs::path(fname).filename().string();
     string ofile;
-    ofile=opath+"/"+fname+".gz";
+    ofile=opath+"/"+to_string(mode)+"_"+fname+".gz";
     string md="w"+to_string(mode)+"b";
     gzFile output = gzopen(ofile.c_str(), md.c_str());
     char buffer[8192];
@@ -49,7 +49,7 @@ string compress (string fname, int mode ,string opath){
     auto duration = chrono::duration_cast<chrono::microseconds>(stop - start); 
     csize = filesize(ofile);
     per = (usize-csize)*100.0/usize;
-    fin=fname+" "+to_string(csize)+" "+to_string(per)+" "+to_string(duration.count())+"\n";
+    fin=fname+"\t"+to_string(mode)+"\t"+to_string(usize)+"\t"+to_string(csize)+"\t"+to_string(per)+"\t"+to_string(duration.count())+"\n";
     return fin;
 }
 
@@ -73,22 +73,26 @@ string decompress (string fname,string opath){
     fout.write((char*)&outfile[0], outfile.size() * sizeof(char));
     fout.close();
 
-    string fin=fname+" "+to_string(duration.count())+"\n";
+    string fin=fname+"\t"+to_string(duration.count())+"\n";
     return fin;
 }
 
-string compdir(fs::directory_iterator it,int mode){
+string compdir(fs::directory_iterator it,int mode,fs::path opath){
     string s="";
-    string opath= "send"+it->path().parent_path().string().substr(7);
-    fs::create_directory(fs::path(opath));
     for(;it!=fs::directory_iterator();++it){
+        std::cout<<it->path()<<"\n";
         if(fs::is_directory(it->path())){
-            fs::create_directory(fs::path(opath)/=it->path().filename());
-            if(!fs::is_empty(it->path()))
-                s+=compdir(fs::directory_iterator(it->path()),mode);
+            fs::path topath=opath;
+            topath/=it->path().filename();
+            std::cout<<topath<<"\n";
+            fs::create_directory(topath);
+            if(!fs::is_empty(it->path())){
+                std::cout<<"hi";
+                s+=compdir(fs::directory_iterator(it->path()),mode,topath);
+            }
         }
         else{
-            s+=compress(it->path().string(),mode,opath);
+            s+=compress(it->path().string(),mode,opath.string());
         }
     }
     return s;

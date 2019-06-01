@@ -32,15 +32,15 @@ public:
   inline const std::string boundary(){
     return boundary_;
   }
-  inline void AddFile(const std::string &name, const std::string &value,int mode=0){
-    files_.push_back(std::move(std::pair<std::pair<std::string, std::string>, int>(std::pair<std::string, std::string>(name,value),mode)));
+  inline void AddFile(const std::string &name, const std::string &value){
+    files_.push_back(std::move(std::pair<std::string, std::string>(name,value)));
   }
   inline void SetFileDetails(std::string fdetails){
     fdetails_=fdetails;
   }
   
   std::string GenBodyContent();
-  std::vector<std::pair<std::string,int>> GetBodyContent();
+  std::vector<std::pair<std::string,std::vector<int>>> GetBodyContent();
   inline void SetBody(std::string content){
     body_content_= content;
   }
@@ -55,7 +55,7 @@ private:
   static const std::string rand_chars_;
   std::string boundary_;
   std::string body_content_;
-  std::vector<std::pair<std::pair<std::string, std::string>, int>> files_;
+  std::vector<std::pair<std::string, std::string>> files_;
   std::string GenBound();
   dirs GetDirs(fs::directory_iterator);
   std::string GetDirMeta(dirs d);  

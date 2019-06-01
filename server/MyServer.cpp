@@ -27,27 +27,44 @@ void MyServer::handle_get(http_request message){
 	MultipartParser p1; 
     p1.SetBody(message.extract_string(true).get());
     p1.SetBound(message.headers().content_type());
-	std::vector<std::pair<std::string,int>> m = p1.GetBodyContent();
-	
+	std::vector<std::pair<std::string,std::vector<int>>> m = p1.GetBodyContent();
+	 /* for(int i=0;i<m.size();++i){
+		std::cout<<m[i].first<<" ";
+		for(int j=0;j<m[i].second.size();++j)
+			std::cout<<m[i].second[j]<<" ";
+		std::cout<<"\n";
+	}  */
     MultipartParser p2;
 	std::string fname,ftype;
 	fs::create_directory(fs::path("send"));
 	string s="";
-	for(int i=0;i<m.size();++i){ //run parallel
-		fs::path p("receive/"+m[i].first);
-		if(token=="compress"){
+	if(token=="compress"){
+		s+="Filename\tMode\tUsize\tCsize\tPerR\tTime\n";
+		for(int i=0;i<m.size();++i){
+			fs::path p("receive/"+m[i].first);
 			if(fs::is_directory(p)){
-				fname=m[i].first;
 				ftype="folder";
-				s+=compdir(fs::directory_iterator(p),m[i].second);
+				for(int j=0;j<m[i].second.size();++j){
+					fname=to_string(m[i].second[j])+"_"+m[i].first;
+					string opath= "send/"+fname;
+    				fs::create_directory(fs::path(opath));
+					s+=compdir(fs::directory_iterator(p),m[i].second[j],fs::path(opath));
+				}
 			}
 			else{
-				fname=m[i].first+".gz";
 				ftype="file";
-				s+=compress(p.string(),m[i].second,"send");
-			}			
+				for(int j=0;j<m[i].second.size();++j){
+					fname=to_string(m[i].second[j])+"_"+m[i].first+".gz";
+					s+=compress(p.string(),m[i].second[j],"send");
+				}
+			}
 		}
-		else{
+		p2.AddFile(ftype,fname);
+	}
+	else{
+		s+="Filename\tTime\n";
+		for(int i=0;i<m.size();++i){
+			fs::path p("receive/"+m[i].first);
 			if(fs::is_directory(p)){
 				fname=m[i].first;
 				ftype="folder";

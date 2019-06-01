@@ -123,7 +123,7 @@ std::string MultipartParser::GenBodyContent(){
   body_content_.clear();
   dirs d;
   std::vector<std::string> mfile;
-  std::vector<int> mode;
+  std::vector<std::vector<int>> mode;
   for(auto &file:files_){
     mfile.push_back(file.first.second);
     mode.push_back(file.second);
@@ -142,15 +142,27 @@ std::string MultipartParser::GenBodyContent(){
     bodymeta+= " ";
     bodymeta+= std::to_string(d.file[i].second);
     bodymeta+= " ";
-    bodymeta+= std::to_string(mode[std::distance(mfile.begin(),std::find(mfile.begin(),mfile.end(),d.file[i].first))]);
+    std::vector<int> temp= mode[std::distance(mfile.begin(),std::find(mfile.begin(),mfile.end(),d.file[i].first))];
+    bodymeta+= std::to_string(temp.size());
+    for(int j=0;j<temp.size();++j){
+      bodymeta+= " ";
+      bodymeta+= std::to_string(temp[j]);
+    }
     bodymeta+= "\n";
   }
   for(int i = 0; i < d.subdirs.size(); ++i){
     bodymeta+= GetDirMeta(d.subdirs[i]);
-    bodymeta+= std::to_string(mode[std::distance(mfile.begin(),std::find(mfile.begin(),mfile.end(),d.subdirs[i].dir))]);
+    std::vector<int> temp= mode[std::distance(mfile.begin(),std::find(mfile.begin(),mfile.end(),d.subdirs[i].dir))];
+    bodymeta+= std::to_string(temp.size());
+    for(int j=0;j<temp.size();++j){
+      bodymeta+= " ";
+      bodymeta+= std::to_string(temp[j]);
+    }
     bodymeta+= "\n";
   }
   bodymeta+="\\\n";
+  std::cout<<bodymeta;
+  
   body_content_ += utility::conversions::to_base64(std::vector<unsigned char> (bodymeta.begin(),bodymeta.end()));
   body_content_ += "\r\n";
   body_content_ += boundary_;

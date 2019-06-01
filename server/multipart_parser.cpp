@@ -125,11 +125,9 @@ std::string MultipartParser::GenBodyContent(){
   body_content_.clear();
   dirs d;
   std::vector<std::string> mfile;
-  std::vector<int> mode;
-  for(auto &file:files_){
-    mfile.push_back(file.first.second);
-    mode.push_back(file.second);
-  }
+  for(auto &file:files_)
+    mfile.push_back(file.second);
+  
     d=GetDirs(fs::directory_iterator("send"));
   
   body_content_ += "\r\n";
@@ -194,12 +192,12 @@ dirs MultipartParser::ParseDirMeta(std::string meta){
   return d;
 }
 
-std::vector<std::pair<std::string,int>> MultipartParser::GetBodyContent(){
+std::vector<std::pair<std::string,std::vector<int>>> MultipartParser::GetBodyContent(){
   std::string boundary = boundary_;
   unsigned long long p=2;
   unsigned long long found = body_content_.find("\r",p);
   unsigned long long lenbody = body_content_.length(),fsize;
-  std::vector<std::pair<std::string,int>> m;
+  std::vector<std::pair<std::string,std::vector<int>>> m;
   dirs d;
   d.dir="receive";
   std::string bound;
@@ -218,15 +216,27 @@ std::vector<std::pair<std::string,int>> MultipartParser::GetBodyContent(){
     found = body_content_.find("\r",p);
     std::vector<unsigned char> v= utility::conversions::from_base64(body_content_.substr(p,found-p));
     std::string meta=std::string(reinterpret_cast<const char*>(&v[0]),v.size());    
-    int mode,f;
+    std::vector<int> mode;
+    int count,f;
     parse=3;
     while(meta[parse]!='\\'){
+      mode.clear();
       if(meta[parse]=='/'){
         d.subdirs.push_back(ParseDirMeta(meta));
         f = meta.find("\n",parse);
-        std::istringstream t1(meta.substr(parse,f-parse));
-        t1>>mode;
+        std::string s=meta.substr(parse,f-parse);
+        //std::cout<<s<<"\n";
         parse=f+1;
+        int tparse=0;
+        f = s.find(" ",tparse);
+        std::istringstream t1(s.substr(tparse,f-tparse));
+        t1>>count;
+        tparse=f-1;
+        for(int i=0;i<count;++i){
+          tparse+=2;
+          mode.push_back(s[tparse]-'0');
+
+        }
         m.push_back(std::make_pair(d.subdirs.back().dir,mode));
       }
       else{
@@ -240,9 +250,14 @@ std::vector<std::pair<std::string,int>> MultipartParser::GetBodyContent(){
         t1>>fsize;
         parse = f+1;
         f = meta.find("\n",parse);
-        std::istringstream t2(meta.substr(parse,f-parse));
-        t2>>mode;
-        parse=f+1;
+        std::string s=meta.substr(parse,f-parse);
+        parse=f+1;//std::cout<<s<<"\n";
+        int tparse=0;
+        count=s[tparse]-'0';
+        for(int i=0;i<count;++i){
+          tparse+=2;
+          mode.push_back(s[tparse]-'0');
+        }
         d.file.push_back(std::make_pair(fname,fsize));
         m.push_back(std::make_pair(fname,mode));
       }
