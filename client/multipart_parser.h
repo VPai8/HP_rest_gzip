@@ -39,16 +39,12 @@ public:
     va_start(args, count);
     for (int i = 0; i < count; ++i){
         modes.push_back(va_arg(args, int));
-        std::cout<<modes[i]<<" ";
+        
     }
     va_end(args);
     files_.push_back(std::move(std::pair<std::pair<std::string, std::string>, std::vector<int>>(std::pair<std::string, std::string>(name,value),modes)));
   }
-  /* inline void Dispfile(){
-    for(int i=0;i<files_.size();++i){
-      std::cout<<files_[i].first.first<<" "<<files_[i].first.second<<" "<<files_[i].second<<"\n";
-    }
-  } */
+  
   std::string GenBodyContent();
   void GetBodyContent();
   inline void SetBody(std::string content){

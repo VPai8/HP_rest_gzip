@@ -80,14 +80,11 @@ string decompress (string fname,string opath){
 string compdir(fs::directory_iterator it,int mode,fs::path opath){
     string s="";
     for(;it!=fs::directory_iterator();++it){
-        std::cout<<it->path()<<"\n";
         if(fs::is_directory(it->path())){
             fs::path topath=opath;
             topath/=it->path().filename();
-            std::cout<<topath<<"\n";
             fs::create_directory(topath);
             if(!fs::is_empty(it->path())){
-                std::cout<<"hi";
                 s+=compdir(fs::directory_iterator(it->path()),mode,topath);
             }
         }
@@ -98,18 +95,19 @@ string compdir(fs::directory_iterator it,int mode,fs::path opath){
     return s;
 } 
   
-string decompdir(fs::directory_iterator it){
+string decompdir(fs::directory_iterator it,fs::path opath){
     string s="";
-    string opath= "send"+it->path().parent_path().string().substr(7);
-    fs::create_directory(fs::path(opath));
     for(;it!=fs::directory_iterator();++it){
         if(fs::is_directory(it->path())){
-            fs::create_directory(fs::path(opath)/=it->path().filename());
-            if(!fs::is_empty(it->path()))
-                s+=decompdir(fs::directory_iterator(it->path()));            
+            fs::path topath=opath;
+            topath/=it->path().filename();
+            fs::create_directory(topath);
+            if(!fs::is_empty(it->path())){
+                s+=decompdir(fs::directory_iterator(it->path()),topath);
+            }
         }
         else{
-            s+=decompress(it->path().string(),opath);
+            s+=decompress(it->path().string(),opath.string());
         }
     }
     return s;

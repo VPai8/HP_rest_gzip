@@ -161,7 +161,7 @@ std::string MultipartParser::GenBodyContent(){
     bodymeta+= "\n";
   }
   bodymeta+="\\\n";
-  std::cout<<bodymeta;
+  
   
   body_content_ += utility::conversions::to_base64(std::vector<unsigned char> (bodymeta.begin(),bodymeta.end()));
   body_content_ += "\r\n";

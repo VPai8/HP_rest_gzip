@@ -120,7 +120,7 @@ dirs MultipartParser::ParseDirData(dirs d){
   return d;
 }
 
-std::string MultipartParser::GenBodyContent(){
+std::string MultipartParser::GenBodyContent(std::string cli){
   
   body_content_.clear();
   dirs d;
@@ -128,7 +128,7 @@ std::string MultipartParser::GenBodyContent(){
   for(auto &file:files_)
     mfile.push_back(file.second);
   
-    d=GetDirs(fs::directory_iterator("send"));
+    d=GetDirs(fs::directory_iterator(cli+"/send"));
   
   body_content_ += "\r\n";
   body_content_ += boundary_;
@@ -192,7 +192,7 @@ dirs MultipartParser::ParseDirMeta(std::string meta){
   return d;
 }
 
-std::vector<std::pair<std::string,std::vector<int>>> MultipartParser::GetBodyContent(){
+std::vector<std::pair<std::string,std::vector<int>>> MultipartParser::GetBodyContent(std::string cli){
   std::string boundary = boundary_;
   unsigned long long p=2;
   unsigned long long found = body_content_.find("\r",p);
@@ -225,7 +225,6 @@ std::vector<std::pair<std::string,std::vector<int>>> MultipartParser::GetBodyCon
         d.subdirs.push_back(ParseDirMeta(meta));
         f = meta.find("\n",parse);
         std::string s=meta.substr(parse,f-parse);
-        //std::cout<<s<<"\n";
         parse=f+1;
         int tparse=0;
         f = s.find(" ",tparse);
@@ -251,7 +250,7 @@ std::vector<std::pair<std::string,std::vector<int>>> MultipartParser::GetBodyCon
         parse = f+1;
         f = meta.find("\n",parse);
         std::string s=meta.substr(parse,f-parse);
-        parse=f+1;//std::cout<<s<<"\n";
+        parse=f+1;
         int tparse=0;
         count=s[tparse]-'0';
         for(int i=0;i<count;++i){
@@ -275,11 +274,9 @@ std::vector<std::pair<std::string,std::vector<int>>> MultipartParser::GetBodyCon
     p=found+2;
     parse=p;
     d = ParseDirData(d);
-    MakeDirs(fs::path("."),d);
-    
+    MakeDirs(fs::path(cli),d);    
     return m;
   }
-  //return std::make_pair(d,m);
 } 
 } //namespace web::http
 } //namespace web

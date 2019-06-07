@@ -39,8 +39,8 @@ public:
     fdetails_=fdetails;
   }
   
-  std::string GenBodyContent();
-  std::vector<std::pair<std::string,std::vector<int>>> GetBodyContent();
+  std::string GenBodyContent(std::string);
+  std::vector<std::pair<std::string,std::vector<int>>> GetBodyContent(std::string);
   inline void SetBody(std::string content){
     body_content_= content;
   }
