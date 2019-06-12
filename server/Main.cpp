@@ -19,7 +19,7 @@ void on_initialize(const string_t& address)
 	g_http = std::unique_ptr<MyServer>(new MyServer(addr));
 	g_http->open().wait();
     
-    ucout << utility::string_t(U("Listening for requests at: ")) << addr << std::endl;
+    ucout << utility::string_t(U("Listening for requests at: http://localhost:8080/HPServer/ ")) << std::endl;
 
     return;
 }
@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
         port = *argv[1];
     } */
 
-    utility::string_t address = U("http://localhost:");
+    utility::string_t address = U("http://+:");
     address.append(port);
 
     on_initialize(address);

@@ -11,14 +11,14 @@ int main(int argc, char* argv[]){
       
         MultipartParser p1;
         std::string boundary = p1.boundary();
-        p1.AddFile("file","ghi.mp3",2,1,9);
-        p1.AddFile("file","client.cpp",1,4);
-        p1.AddFile("folder","xyz",2,1,5);
+        p1.AddFile("file","ghi.mp3.gz");
+        p1.AddFile("file","client.cpp.gz");
+        p1.AddFile("folder","xyz");
         
         std::string body = p1.GenBodyContent();
         http_request req;
         http_client client(U("http://localhost:8080/HPServer/"));
-        req.set_request_uri("compress");
+        req.set_request_uri("decompress");
         req.set_method(web::http::methods::GET);
         req.set_body(body,U("multipart/form-data; boundary="+boundary));
         
